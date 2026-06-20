@@ -1,1 +1,36 @@
+name: Mirror Repository
 
+on:
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Workflow Repo
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Mirror test-2 to test-3
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          SOURCE_ORG: vdesharaju31-maker
+          TARGET_ORG: vdesharaju31-maker
+          SOURCE_REPO: test-2
+          TARGET_REPO: test-3
+        run: |
+          git clone --mirror \
+          https://${GH_PAT}@github.com/${SOURCE_ORG}/${SOURCE_REPO}.git
+
+          cd ${SOURCE_REPO}.git
+
+          git push --mirror \
+          https://${GH_PAT}@github.com/${TARGET_ORG}/${TARGET_REPO}.git
+
+      - name: Success
+        run: echo "Repository mirroring completed successfully"
