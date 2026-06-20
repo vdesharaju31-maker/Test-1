@@ -19,8 +19,8 @@ jobs:
       - name: Mirror test-2 to test-3
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-          SOURCE_ORG: YOUR_ORG_NAME
-          TARGET_ORG: YOUR_ORG_NAME
+          SOURCE_ORG: vdesharaju31-maker
+          TARGET_ORG: vdesharaju31-maker
           SOURCE_REPO: test-2
           TARGET_REPO: test-3
         run: |
