@@ -29,7 +29,10 @@ jobs:
 
           cd ${SOURCE_REPO}.git
 
-          git push --mirror \
+          git push --all \
+          https://${GH_PAT}@github.com/${TARGET_ORG}/${TARGET_REPO}.git
+
+          git push --tags \
           https://${GH_PAT}@github.com/${TARGET_ORG}/${TARGET_REPO}.git
 
       - name: Success
