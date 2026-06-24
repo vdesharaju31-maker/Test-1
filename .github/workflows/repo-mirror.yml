@@ -1,0 +1,72 @@
+name: Mirror Multiple Repositories
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repos:
+        description: "Comma separated source repos"
+        required: true
+        default: "test-2"
+
+      target_repos:
+        description: "Comma separated target repos"
+        required: true
+        default: "Test-3"
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Mirror Repositories
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          OWNER: vdesharaju31-maker
+          SOURCE_REPOS: test-2
+          TARGET_REPOS: test-3
+          SOURCE_REPOS: repo-a
+          TARGET_REPOS: repo-a-copy
+          SOURCE_REPOS: repo-b
+          TARGET_REPOS: repo-b-copy
+        run: |
+
+          IFS=',' read -ra SOURCES <<< "$SOURCE_REPOS"
+          IFS=',' read -ra TARGETS <<< "$TARGET_REPOS"
+
+          if [ ${#SOURCES[@]} -ne ${#TARGETS[@]} ]; then
+            echo "Number of source repos must match target repos"
+            exit 1
+          fi
+
+          for i in "${!SOURCES[@]}"; do
+
+            SOURCE_REPO=$(echo "${SOURCES[$i]}" | xargs)
+            TARGET_REPO=$(echo "${TARGETS[$i]}" | xargs)
+
+            echo "================================="
+            echo "Migrating ${SOURCE_REPO} -> ${TARGET_REPO}"
+            echo "================================="
+
+            rm -rf ${SOURCE_REPO}.git
+
+            git clone --mirror \
+              https://${GH_PAT}@github.com/${OWNER}/${SOURCE_REPO}.git
+
+            cd ${SOURCE_REPO}.git
+
+            git for-each-ref --format='%(refname)' refs/pull | \
+              xargs -r -n 1 git update-ref -d
+
+            git push --mirror \
+              https://${GH_PAT}@github.com/${OWNER}/${TARGET_REPO}.git
+
+            cd ..
+
+            echo "Completed ${SOURCE_REPO}"
+
+          done
