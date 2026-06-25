@@ -1,37 +1,65 @@
-ame: Mirror Repositories
-  env:
-    GH_PAT: ${{ secrets.GH_PAT }}
-    OWNER: vdesharaju31-maker
-  run: |
-    SOURCE_REPOS="${{ github.event.inputs.source_repos }}"
-    TARGET_REPOS="${{ github.event.inputs.target_repos }}"
+name: Mirror Multiple Repositories
 
-    IFS=',' read -ra SOURCES <<< "$SOURCE_REPOS"
-    IFS=',' read -ra TARGETS <<< "$TARGET_REPOS"
+on:
+  workflow_dispatch:
+    inputs:
+      source_repos:
+        description: "Comma separated source repositories"
+        required: true
+        default: "test-2"
 
-    if [ ${#SOURCES[@]} -ne ${#TARGETS[@]} ]; then
-      echo "Number of source repos must match target repos"
-      exit 1
-    fi
+      target_repos:
+        description: "Comma separated target repositories"
+        required: true
+        default: "Test-3"
 
-    for i in "${!SOURCES[@]}"; do
-      SOURCE_REPO=$(echo "${SOURCES[$i]}" | xargs)
-      TARGET_REPO=$(echo "${TARGETS[$i]}" | xargs)
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
 
-      echo "Migrating ${SOURCE_REPO} -> ${TARGET_REPO}"
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      OWNER: vdesharaju31-maker
 
-      rm -rf "${SOURCE_REPO}.git"
+    steps:
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
 
-      git clone --mirror \
-        https://${GH_PAT}@github.com/${OWNER}/${SOURCE_REPO}.git
+      - name: Mirror Repositories
+        run: |
+          SOURCE_REPOS="${{ github.event.inputs.source_repos }}"
+          TARGET_REPOS="${{ github.event.inputs.target_repos }}"
 
-      cd "${SOURCE_REPO}.git"
+          IFS=',' read -ra SOURCES <<< "$SOURCE_REPOS"
+          IFS=',' read -ra TARGETS <<< "$TARGET_REPOS"
 
-      git for-each-ref --format='%(refname)' refs/pull | \
-        xargs -r -n 1 git update-ref -d
+          if [ ${#SOURCES[@]} -ne ${#TARGETS[@]} ]; then
+            echo "ERROR: Number of source repos must equal number of target repos."
+            exit 1
+          fi
 
-      git push --mirror \
-        https://${GH_PAT}@github.com/${OWNER}/${TARGET_REPO}.git
+          for i in "${!SOURCES[@]}"; do
 
-      cd ..
-    done
+            SOURCE_REPO=$(echo "${SOURCES[$i]}" | xargs)
+            TARGET_REPO=$(echo "${TARGETS[$i]}" | xargs)
+
+            echo "Migrating ${SOURCE_REPO} -> ${TARGET_REPO}"
+
+            rm -rf "${SOURCE_REPO}.git"
+
+            git clone --mirror \
+              https://${GH_PAT}@github.com/${OWNER}/${SOURCE_REPO}.git
+
+            cd "${SOURCE_REPO}.git"
+
+            git for-each-ref --format='%(refname)' refs/pull | \
+              xargs -r -n 1 git update-ref -d
+
+            git push --mirror \
+              https://${GH_PAT}@github.com/${OWNER}/${TARGET_REPO}.git
+
+            cd ..
+
+          done
